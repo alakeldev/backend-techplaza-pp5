@@ -1,6 +1,5 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from django.contrib.sites.shortcuts import get_current_site
 from rest_framework.exceptions import AuthenticationFailed
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -99,10 +98,8 @@ class PasswordResetSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         email = attrs.get("email")
-        request = self.context.get("request")
-        site_domain = get_current_site(request).domain
 
-        if User.objects.filter(email=email).exists():
+        try:
             user = User.objects.get(email=email)
             uidb64 = urlsafe_base64_encode(smart_bytes(user.id))
             token = PasswordResetTokenGenerator().make_token(user)
@@ -118,7 +115,7 @@ class PasswordResetSerializer(serializers.Serializer):
                 ),
                 "to": user.email,
             }
-        else:
+        except User.DoesNotExist:
             data = {
                 "email_subject": "Registration Invitation",
                 "email_text": (

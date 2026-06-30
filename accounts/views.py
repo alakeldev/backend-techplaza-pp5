@@ -32,8 +32,7 @@ class RegisterView(GenericAPIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        user_data = request.data
-        serializer = self.serializer_class(data=user_data)
+        serializer = self.serializer_class(data=request.data)
         if serializer.is_valid(raise_exception=True):
             user = serializer.save()
 
@@ -61,11 +60,11 @@ class RegisterView(GenericAPIView):
                 fail_silently=False,
             )
 
-            user_data = RegisterSerializer(user).data
+            response_data = RegisterSerializer(user).data
 
             return Response(
                 {
-                    "data": user_data,
+                    "data": response_data,
                     "message": f"""Thanks for Registration {user.full_name},
                             a verified code has been sent to your Email.""",
                 },
