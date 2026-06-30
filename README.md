@@ -27,6 +27,7 @@
   * [**Software**](<#software>)
   * [**Libraries and Imports**](<#libraries-and-imports>)
 * [**Deployment**](<#deployment>)
+* [**Running Locally**](<#running-locally>)
 * [**Credits**](<#credits>)
   * [**Content**](<#content>)
 
@@ -372,6 +373,155 @@ if RENDER_EXTERNAL_HOSTNAME:
 3. In the manual deploy section - choose the main / master branch
 4. Click 'deploy branch' to deploy the project to Heroku - you can also watch the process by viewing the build logs
 5. Once complete - open the app to view
+
+# Running Locally
+
+Follow these steps to run the Techplaza backend API on your local machine.
+
+## Prerequisites
+
+- [Python 3.10+](https://www.python.org/downloads/)
+- [Git](https://git-scm.com/)
+- pip (comes with Python)
+- A Gmail account with an [App Password](https://support.google.com/accounts/answer/185833) (required for email features — registration OTP and password reset)
+
+> **Database note:** By default the project connects to PostgreSQL via a `DATABASE_URL` environment variable. For local development you can skip PostgreSQL entirely and use the built-in SQLite by setting a `DEV` environment variable in `env.py` (see step 4).
+
+---
+
+## Step 1 — Clone the repository
+
+```bash
+git clone https://github.com/alakeldev/techplaza-app-backend.git
+cd techplaza-app-backend
+```
+
+## Step 2 — Create and activate a virtual environment
+
+```bash
+python -m venv venv
+
+# macOS / Linux
+source venv/bin/activate
+
+# Windows
+venv\Scripts\activate
+```
+
+## Step 3 — Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## Step 4 — Create the `env.py` file
+
+Create a file called `env.py` in the **root of the project** (same level as `manage.py`). This file is listed in `.gitignore` and will never be committed.
+
+**Option A — SQLite (easiest, no external database needed):**
+
+```python
+import os
+
+os.environ.setdefault("SECRET_KEY", "replace-with-a-long-random-secret-key")
+os.environ.setdefault("DEV", "1")                       # Switches to SQLite automatically
+os.environ.setdefault("EMAIL_HOST_USER", "your-gmail@gmail.com")
+os.environ.setdefault("EMAIL_HOST_PASSWORD", "your-gmail-app-password")
+```
+
+**Option B — PostgreSQL (mirrors the production setup):**
+
+```python
+import os
+
+os.environ.setdefault("SECRET_KEY", "replace-with-a-long-random-secret-key")
+os.environ.setdefault("DATABASE_URL", "postgres://USER:PASSWORD@HOST:PORT/DBNAME")
+os.environ.setdefault("EMAIL_HOST_USER", "your-gmail@gmail.com")
+os.environ.setdefault("EMAIL_HOST_PASSWORD", "your-gmail-app-password")
+```
+
+> **SECRET_KEY:** Generate a strong random key — for example with:
+> ```bash
+> python -c "import secrets; print(secrets.token_urlsafe(50))"
+> ```
+
+> **EMAIL_HOST_PASSWORD:** Use a [Gmail App Password](https://support.google.com/accounts/answer/185833), not your regular Gmail password. Two-Factor Authentication must be enabled on the Gmail account first.
+
+> **DATABASE_URL:** If using ElephantSQL, copy the URL from your instance dashboard. It starts with `postgres://`.
+
+## Step 5 — Run database migrations
+
+```bash
+python manage.py migrate
+```
+
+## Step 6 — Create a superuser (optional)
+
+```bash
+python manage.py createsuperuser
+```
+
+You will be prompted for a full name, email, and password. The superuser account is pre-verified and can access the Django admin panel at `/admin/`.
+
+## Step 7 — Start the development server
+
+```bash
+python manage.py runserver
+```
+
+The API will be available at **http://127.0.0.1:8000/**
+
+| URL | Description |
+|-----|-------------|
+| `http://127.0.0.1:8000/` | Welcome message |
+| `http://127.0.0.1:8000/admin/` | Django admin panel |
+| `http://127.0.0.1:8000/api/auth/` | Accounts endpoints (register, login, logout, etc.) |
+| `http://127.0.0.1:8000/api/app2/` | Tasks endpoints |
+| `http://127.0.0.1:8000/api/app3/` | Cards endpoints |
+| `http://127.0.0.1:8000/api/game1/` | Snake high scores endpoints |
+
+---
+
+## Running with the Frontend
+
+The frontend repository is at: [techplaza-app-frontend](https://github.com/alakeldev/techplaza-app-frontend)
+
+To connect a locally running frontend (typically `http://localhost:3000`) to this backend, add the local frontend URL to `CORS_ALLOWED_ORIGINS` and `CSRF_TRUSTED_ORIGINS` in `techplaza_api/settings.py`:
+
+```python
+CORS_ALLOWED_ORIGINS = [
+    "https://frontend-techplaza-d0af91d53972.herokuapp.com",
+    "http://localhost:3000",   # add this for local frontend dev
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://frontend-techplaza-d0af91d53972.herokuapp.com",
+    "http://localhost:3000",   # add this for local frontend dev
+]
+```
+
+> Do not commit these local additions — they are only needed for local development.
+
+---
+
+## Notes
+
+- `DEBUG` is set to `False` in `settings.py`. The development server still works correctly at `127.0.0.1` because that host is included in `ALLOWED_HOSTS`.
+- The `env.py` file is listed in `.gitignore` and must never be committed to version control.
+- Email sending (OTP for registration and password reset) requires valid `EMAIL_HOST_USER` and `EMAIL_HOST_PASSWORD` values. If you do not need email functionality during local testing, you can temporarily set the email backend to console output by adding this line to `env.py`: *(this requires a one-line addition to `settings.py` — see below)*
+
+  In `env.py`:
+  ```python
+  os.environ.setdefault("EMAIL_BACKEND", "console")
+  ```
+
+  In `techplaza_api/settings.py`, replace the `EMAIL_BACKEND` line:
+  ```python
+  if os.environ.get("EMAIL_BACKEND") == "console":
+      EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+  else:
+      EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+  ```
 
 # Credits
 
