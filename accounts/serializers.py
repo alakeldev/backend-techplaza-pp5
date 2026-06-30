@@ -79,7 +79,7 @@ class LoginSerializer(serializers.ModelSerializer):
             raise AuthenticationFailed("User's Email isn't verified")
         user_token = user.user_tokens()
         return {
-            "full_name": user.user_full_name,
+            "full_name": user.user_full_name(),
             "email": user.email,
             "token": str(user_token.get("token")),
             "refresh_token": str(user_token.get("refresh")),
@@ -162,22 +162,24 @@ class NewPasswordSerializer(serializers.Serializer):
 
     def validate(self, attrs):
         try:
-            token = attrs.get("token")
             uidb64 = attrs.get("uidb64")
-            password = attrs.get("password")
-            password_confirm = attrs.get("password_confirm")
-
             user_id = force_str(urlsafe_base64_decode(uidb64))
             user = User.objects.get(id=user_id)
-            if not PasswordResetTokenGenerator().check_token(user, token):
-                raise AuthenticationFailed("The link is invalid", 401)
-            if password != password_confirm:
-                raise AuthenticationFailed("Password Fields didn't match!")
-            user.set_password(password)
-            user.save()
-            return user
-        except Exception:
-            return AuthenticationFailed("The link is invalid/expired")
+        except (ValueError, User.DoesNotExist):
+            raise AuthenticationFailed("The reset link is invalid or has expired.", 401)
+
+        token = attrs.get("token")
+        if not PasswordResetTokenGenerator().check_token(user, token):
+            raise AuthenticationFailed("The reset link is invalid or has expired.", 401)
+
+        password = attrs.get("password")
+        password_confirm = attrs.get("password_confirm")
+        if password != password_confirm:
+            raise serializers.ValidationError("Password fields didn't match.")
+
+        user.set_password(password)
+        user.save()
+        return attrs
 
 
 class LogoutSerializer(serializers.Serializer):

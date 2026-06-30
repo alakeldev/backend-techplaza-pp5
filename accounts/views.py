@@ -183,7 +183,7 @@ class ConfirmPasswordResetView(GenericAPIView):
                 },
                 status=status.HTTP_200_OK,
             )
-        except DjangoUnicodeDecodeError:
+        except (DjangoUnicodeDecodeError, User.DoesNotExist):
             return Response(
                 {"message": "Token has expired"},
                 status=status.HTTP_401_UNAUTHORIZED,
